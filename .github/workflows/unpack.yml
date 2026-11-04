@@ -1,0 +1,31 @@
+name: Extract AGENT SENDIKO V1.4
+
+on:
+  push:
+    paths:
+      - 'AGENT_SENDIKO_HYBRID_v1_4_CLOUD_MEMORY_SELFDEV.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract application
+        run: |
+          mkdir -p /tmp/sendiko
+          unzip -oq AGENT_SENDIKO_HYBRID_v1_4_CLOUD_MEMORY_SELFDEV.zip -d /tmp/sendiko
+          cp -R /tmp/sendiko/sendiko-ai-agent/. .
+
+      - name: Save extracted files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --cached --quiet || git commit -m "Extract AGENT SENDIKO V1.4"
+          git push

@@ -47,7 +47,7 @@ async function callAI(provider, messages) {
   }
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 1800);
+  const timer = setTimeout(() => controller.abort(), 7000);
 
   try {
     const response = await fetch(cfg.url, {

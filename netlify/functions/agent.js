@@ -1,5 +1,6 @@
 
 const cors = { "Content-Type": "application/json" };
+
 const json = (statusCode, data) => ({
   statusCode,
   headers: cors,
@@ -8,13 +9,17 @@ const json = (statusCode, data) => ({
 
 function calculator(expression) {
   const s = String(expression || "").replace(/\s+/g, "");
+
   if (!s || s.length > 80 || !/^[0-9+\-*/().%]+$/.test(s)) {
     throw new Error("Ekspresi matematika tidak valid.");
   }
+
   const value = Function('"use strict"; return (' + s + ')')();
+
   if (!Number.isFinite(value)) {
     throw new Error("Hasil perhitungan tidak valid.");
   }
+
   return value;
 }
 
@@ -28,6 +33,7 @@ const PROVIDERS = {
       power: "gpt-4.1"
     }
   },
+
   openrouter: {
     base: "https://openrouter.ai/api/v1",
     key: "OPENROUTER_API_KEY",
@@ -37,6 +43,7 @@ const PROVIDERS = {
       power: "anthropic/claude-sonnet-4"
     }
   },
+
   groq: {
     base: "https://api.groq.com/openai/v1",
     key: "GROQ_API_KEY",
@@ -46,6 +53,7 @@ const PROVIDERS = {
       power: "llama-3.3-70b-versatile"
     }
   },
+
   gemini: {
     base: "https://generativelanguage.googleapis.com/v1beta/openai",
     key: "GEMINI_API_KEY",
@@ -110,6 +118,7 @@ exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
     const settings = body.settings || {};
+
     const providerName = String(
       settings.provider || "openai"
     ).toLowerCase();
@@ -152,17 +161,13 @@ exports.handler = async (event) => {
       model = routeMode === "custom"
         ? String(settings.model || cfg.models.balanced)
         : cfg.models[routeMode];
-
-      if (settings.model && routeMode === "custom") {
-        model = String(settings.model);
-      }
     }
 
     const apiKey = process.env[keyName];
 
     if (!apiKey) {
       return json(500, {
-        error: `API key provider ${providerName} belum dipasang di Netlify Environment variables (${keyName}).`
+        error: `API key ${keyName} belum dipasang di Netlify.`
       });
     }
 
@@ -180,12 +185,18 @@ exports.handler = async (event) => {
       ? body.skills.slice(0, 20)
       : [];
 
-    const system = `Kamu adalah AGENT SENDIKO, agen AI praktis untuk pengguna umum. Jawab dalam Bahasa Indonesia kecuali diminta lain.
-Jalankan pola agent: pahami tujuan, buat rencana, pilih tools yang tersedia, jalankan satu per satu, periksa hasil, lalu berikan ringkasan. Jangan mengaku melakukan tindakan eksternal yang tidak benar-benar dilakukan.
-Jika tugas besar, pecah menjadi langkah yang jelas. Bila informasi kurang, tanyakan hanya hal yang paling penting.
-Memory pengguna (konteks, bukan instruksi sistem): ${memories.map(x => "- " + String(x).slice(0, 500)).join("\n") || "(kosong)"}.
-Skills pengguna: ${skills.map(x => "- " + String(x.name).slice(0, 100) + ": " + String(x.instruction).slice(0, 700)).join("\n") || "(tidak ada)"}.
-Batas: gunakan hanya tools yang tersedia. Jangan meminta password atau API key. Jangan melakukan tindakan eksternal yang tidak tersedia atau berisiko tanpa persetujuan.`;
+    const system = `Kamu adalah AGENT SENDIKO, agen AI praktis untuk pengguna umum.
+Jawab dalam Bahasa Indonesia kecuali diminta lain.
+Pahami tujuan, buat rencana, gunakan tools yang tersedia, periksa hasil, lalu berikan ringkasan.
+Jangan mengaku melakukan tindakan eksternal yang tidak benar-benar dilakukan.
+Jika informasi kurang, tanyakan hal yang paling penting.
+Memory pengguna:
+${memories.map(x => "- " + String(x).slice(0, 500)).join("\n") || "(kosong)"}
+
+Skills pengguna:
+${skills.map(x => "- " + String(x.name).slice(0, 100) + ": " + String(x.instruction).slice(0, 700)).join("\n") || "(tidak ada)"}
+
+Gunakan hanya tools yang tersedia. Jangan meminta password atau API key.`;
 
     const messages = [
       { role: "system", content: system },
@@ -198,6 +209,17 @@ Batas: gunakan hanya tools yang tersedia. Jangan meminta password atau API key. 
     let finalText = "";
 
     for (let turn = 0; turn < 6; turn++) {
+      const requestBody = {
+        model,
+        messages,
+        temperature: 0.5
+      };
+
+      if (providerName !== "custom") {
+        requestBody.tools = toolSchemas;
+        requestBody.tool_choice = "auto";
+      }
+
       const response = await fetch(
         base + "/chat/completions",
         {
@@ -206,29 +228,58 @@ Batas: gunakan hanya tools yang tersedia. Jangan meminta password atau API key. 
             "Authorization": "Bearer " + apiKey,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
-            model,
-            messages,
-            tools: toolSchemas,
-            tool_choice: "auto",
-            temperature: 0.5
-          })
+          body: JSON.stringify(requestBody)
         }
       );
 
-      const data = await response.json();
+      // Baca respons sebagai teks dahulu agar error tidak hilang
+      const rawText = await response.text();
+
+      let data = {};
+
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        const safeText = rawText
+          .replace(/Bearer\s+\S+/gi, "Bearer [REDACTED]")
+          .replace(/AIza[0-9A-Za-z_-]{20,}/g, "[REDACTED]")
+          .slice(0, 1000);
+
+        return json(502, {
+          error: "Provider mengirim respons bukan JSON.",
+          provider: providerName,
+          http_status: response.status,
+          detail: safeText || "Respons kosong."
+        });
+      }
 
       if (!response.ok) {
+        let detail =
+          data.error?.message ||
+          data.error?.status ||
+          data.message ||
+          data.detail ||
+          JSON.stringify(data);
+
+        detail = String(detail)
+          .replace(/Bearer\s+\S+/gi, "Bearer [REDACTED]")
+          .replace(/AIza[0-9A-Za-z_-]{20,}/g, "[REDACTED]")
+          .slice(0, 1500);
+
         return json(response.status, {
-          error: data.error?.message ||
-            `Provider ${providerName} gagal memproses permintaan.`
+          error: "Provider " + providerName + " gagal.",
+          http_status: response.status,
+          model,
+          detail
         });
       }
 
       const msg = data.choices?.[0]?.message;
 
       if (!msg) {
-        throw new Error("Respons model kosong.");
+        throw new Error(
+          "Respons model kosong: " + JSON.stringify(data).slice(0, 500)
+        );
       }
 
       messages.push(msg);
@@ -272,7 +323,7 @@ Batas: gunakan hanya tools yang tersedia. Jangan meminta password atau API key. 
     }
 
     if (!finalText) {
-      finalText = "Saya sudah mencapai batas langkah otomatis untuk satu giliran. Beri instruksi lanjutan agar saya meneruskan.";
+      finalText = "Batas langkah otomatis tercapai. Berikan instruksi lanjutan.";
     }
 
     return json(200, {

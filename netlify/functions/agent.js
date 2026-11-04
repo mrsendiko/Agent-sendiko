@@ -1,5 +1,5 @@
 
-const json = (statusCode, data) => ({
+const sendJSON = (statusCode, data) => ({
   statusCode,
   headers: {
     "Content-Type": "application/json",
@@ -11,56 +11,60 @@ const json = (statusCode, data) => ({
 const PROVIDERS = {
   gemini: {
     key: "GEMINI_API_KEY",
-    base: "https://generativelanguage.googleapis.com/v1beta/openai",
+    url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
     model: "gemini-3.8-flash"
   },
   groq: {
     key: "GROQ_API_KEY",
-    base: "https://api.groq.com/openai/v1",
-    model: "llama-3.3-70b-versatile"
+    url: "https://api.groq.com/openai/v1/chat/completions",
+    model: "openai/gpt-oss-20b"
   },
   openai: {
     key: "OPENAI_API_KEY",
-    base: "https://api.openai.com/v1",
+    url: "https://api.openai.com/v1/chat/completions",
     model: "gpt-4o-mini"
   },
   openrouter: {
     key: "OPENROUTER_API_KEY",
-    base: "https://openrouter.ai/api/v1",
+    url: "https://openrouter.ai/api/v1/chat/completions",
     model: "openrouter/free"
   }
 };
 
-const PRIORITY = ["gemini", "groq", "openai", "openrouter"];
+const PRIORITY = [
+  "gemini",
+  "groq",
+  "openai",
+  "openrouter"
+];
 
-async function askProvider(name, messages, modelOverride) {
-  const cfg = PROVIDERS[name];
-  const apiKey = process.env[cfg.key];
+async function callAI(provider, messages) {
+  const cfg = PROVIDERS[provider];
+  const key = process.env[cfg.key];
 
-  if (!apiKey) {
-    throw new Error("API key " + cfg.key + " belum tersedia.");
+  if (!key) {
+    throw new Error("API key " + cfg.key + " tidak ditemukan");
   }
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 4500);
+  const timer = setTimeout(() => controller.abort(), 1800);
 
   try {
-    const response = await fetch(cfg.base + "/chat/completions", {
+    const response = await fetch(cfg.url, {
       method: "POST",
       signal: controller.signal,
       headers: {
-        "Authorization": "Bearer " + apiKey,
+        "Authorization": "Bearer " + key,
         "Content-Type": "application/json",
-        ...(name === "openrouter" ? {
+        ...(provider === "openrouter" ? {
           "HTTP-Referer": "https://creative-fox-6c5ff8.netlify.app",
           "X-Title": "AGENT SENDIKO"
         } : {})
       },
       body: JSON.stringify({
-        model: modelOverride || cfg.model,
+        model: cfg.model,
         messages,
-        temperature: 0.5,
-        max_tokens: 1200,
+        max_tokens: 600,
         stream: false
       })
     });
@@ -71,25 +75,30 @@ async function askProvider(name, messages, modelOverride) {
     try {
       data = JSON.parse(raw);
     } catch {
-      throw new Error("Respons provider bukan JSON.");
+      throw new Error("Respons provider bukan JSON");
     }
 
     if (!response.ok) {
       throw new Error(
-        data.error?.message ||
-        "HTTP " + response.status
+        data.error?.message || "HTTP " + response.status
       );
     }
 
-    const reply = data.choices?.[0]?.message?.content;
+    const content = data.choices?.[0]?.message?.content;
 
-    if (!reply || typeof reply !== "string") {
-      throw new Error("Provider tidak memberikan jawaban.");
+    const reply = typeof content === "string"
+      ? content
+      : Array.isArray(content)
+        ? content.map(x => x.text || "").join("")
+        : "";
+
+    if (!reply.trim()) {
+      throw new Error("Provider tidak mengirim jawaban");
     }
 
     return {
       reply,
-      model: data.model || modelOverride || cfg.model
+      model: data.model || cfg.model
     };
 
   } finally {
@@ -99,7 +108,9 @@ async function askProvider(name, messages, modelOverride) {
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
-    return json(405, { error: "Gunakan metode POST." });
+    return sendJSON(405, {
+      error: "Gunakan metode POST"
+    });
   }
 
   try {
@@ -111,42 +122,42 @@ exports.handler = async (event) => {
     ).toLowerCase();
 
     const memories = Array.isArray(body.memories)
-      ? body.memories.slice(0, 30)
+      ? body.memories.slice(-10)
       : [];
 
     const skills = Array.isArray(body.skills)
-      ? body.skills.slice(0, 20)
+      ? body.skills.slice(0, 10)
       : [];
 
-    const system = `
-Kamu adalah AGENT SENDIKO, asisten AI dan agen kerja digital.
+    const systemPrompt = `
+Kamu adalah AGENT SENDIKO, asisten AI digital.
 
-Jawab dalam Bahasa Indonesia kecuali pengguna meminta bahasa lain.
+Gunakan Bahasa Indonesia kecuali diminta bahasa lain.
+Jawab dengan jelas, ramah, dan praktis.
+Bantu pengguna menyelesaikan pekerjaan secara bertahap.
+Jangan mengaku melakukan tindakan yang belum dilakukan.
+Jangan pernah meminta API key atau password.
 
-Pahami tujuan pengguna, susun langkah, berikan hasil yang praktis,
-dan jangan mengaku telah melakukan tindakan yang belum dilakukan.
+MEMORY:
+${memories.map(x => String(x).slice(0, 300)).join("\n")}
 
-Jika tugas membutuhkan informasi tambahan, tanyakan hal yang paling penting.
-
-MEMORY PENGGUNA:
-${memories.map(x => "- " + String(x).slice(0, 500)).join("\n") || "(kosong)"}
-
-SKILL PENGGUNA:
+SKILL:
 ${skills.map(x =>
-  "- " + String(x.name).slice(0, 100) +
-  ": " + String(x.instruction).slice(0, 700)
-).join("\n") || "(kosong)"}
-
-Jangan meminta password atau API key pengguna.
-Jangan mengarang hasil pekerjaan atau tindakan eksternal.
+  String(x.name || "").slice(0, 80) +
+  ": " +
+  String(x.instruction || "").slice(0, 400)
+).join("\n")}
 `;
 
     const history = Array.isArray(body.messages)
-      ? body.messages.slice(-18)
+      ? body.messages.slice(-10)
       : [];
 
     const messages = [
-      { role: "system", content: system },
+      {
+        role: "system",
+        content: systemPrompt
+      },
       ...history
         .filter(m =>
           m &&
@@ -155,62 +166,52 @@ Jangan mengarang hasil pekerjaan atau tindakan eksternal.
         )
         .map(m => ({
           role: m.role,
-          content: m.content.slice(0, 12000)
+          content: m.content.slice(0, 3000)
         }))
     ];
 
-    let order = PRIORITY.slice();
+    const order = [
+      ...(PROVIDERS[selected] ? [selected] : []),
+      ...PRIORITY.filter(p => p !== selected)
+    ];
 
-    // Provider yang dipilih pengguna dicoba terlebih dahulu.
-    if (PROVIDERS[selected]) {
-      order = [
-        selected,
-        ...PRIORITY.filter(p => p !== selected)
-      ];
-    }
+    const failures = [];
 
-    const attempts = [];
-
-    for (const name of order) {
+    for (const provider of order) {
       try {
-        const result = await askProvider(
-          name,
-          messages,
-          settings.routeMode === "custom" &&
-          name === selected
-            ? settings.model
-            : null
-        );
+        const result = await callAI(provider, messages);
 
-        return json(200, {
+        return sendJSON(200, {
           reply: result.reply,
           memory_updates: [],
-          provider: name,
+          provider,
           model: result.model,
-          fallback_used: name !== selected,
-          attempts
+          fallback_used: provider !== selected,
+          attempts: failures
         });
 
       } catch (error) {
-        const reason = error.name === "AbortError"
-          ? "Waktu respons habis"
-          : error.message;
-
-        attempts.push({
-          provider: name,
-          error: String(reason).slice(0, 250)
+        failures.push({
+          provider,
+          error: error.name === "AbortError"
+            ? "Respons melewati batas waktu"
+            : String(error.message).slice(0, 180)
         });
       }
     }
 
-    return json(502, {
-      error: "Semua provider gagal memberikan jawaban. Periksa API key, model, dan batas penggunaan.",
-      attempts
+    const detail = failures
+      .map(x => x.provider + ": " + x.error)
+      .join(" | ");
+
+    return sendJSON(502, {
+      error: "Semua provider gagal. " + detail,
+      attempts: failures
     });
 
   } catch (error) {
-    return json(500, {
-      error: error.message || "Kesalahan internal AGENT SENDIKO."
+    return sendJSON(500, {
+      error: error.message || "Kesalahan backend AGENT SENDIKO"
     });
   }
 };

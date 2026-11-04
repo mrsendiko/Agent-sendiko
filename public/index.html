@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#090d18">
+  <meta name="description" content="AGENT SENDIKO - asisten AI yang bisa merencanakan dan menjalankan tugas.">
+  <title>AGENT SENDIKO</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-mark">S</div>
+      <div class="brand-copy"><strong>AGENT</strong><span>SENDIKO</span></div>
+      <div class="top-status"><i></i> ONLINE</div>
+    </header>
+
+    <main class="main-content">
+      <section class="view active" id="view-chat">
+        <div class="welcome">
+          <div class="eyebrow">AUTONOMOUS WORKSPACE</div>
+          <h1>Apa yang ingin<br><em>kita kerjakan?</em></h1>
+          <p>Berikan perintah. Agent akan menyusun langkah dan membantu menyelesaikannya.</p>
+        </div>
+        <div class="quick-grid">
+          <button class="quick-card" data-prompt="Bantu saya merencanakan sebuah proyek dari awal sampai selesai."><span>✦</span><b>Rencanakan proyek</b><small>Susun langkah kerja</small></button>
+          <button class="quick-card" data-prompt="Buatkan ide konten video promosi usaha beserta naskah dan adegannya."><span>◈</span><b>Buat konten</b><small>Ide, naskah, storyboard</small></button>
+          <button class="quick-card" data-prompt="Bantu saya menganalisis ide bisnis dan buat rencana tindakan."><span>⌁</span><b>Analisis ide</b><small>Evaluasi dan solusi</small></button>
+          <button class="quick-card" data-prompt="Buat daftar tugas harian yang realistis untuk saya."><span>✓</span><b>Atur tugas</b><small>Prioritas dan checklist</small></button>
+        </div>
+        <div class="section-line"><span>PERCAKAPAN</span><button id="clearChat" class="text-button">Bersihkan</button></div>
+        <div id="messages" class="messages">
+          <div class="message assistant">
+            <div class="avatar">S</div>
+            <div class="bubble"><b>Halo, saya SENDIKO.</b><p>Saya siap membantu merencanakan pekerjaan, menggunakan tools yang tersedia, dan menyimpan catatan penting. Apa tugas pertama kita?</p></div>
+          </div>
+        </div>
+        <div class="composer-wrap">
+          <div class="composer">
+            <textarea id="prompt" rows="1" placeholder="Tulis perintah untuk agent..."></textarea>
+            <button id="sendBtn" class="send-btn" aria-label="Kirim">↑</button>
+          </div>
+          <div class="composer-hint">SENDIKO dapat membuat kesalahan. Periksa hasil penting.</div>
+        </div>
+      </section>
+
+      <section class="view" id="view-agent">
+        <div class="page-heading"><div class="eyebrow">TASK CONTROL</div><h1>Agent <em>Center</em></h1><p>Kelola pekerjaan yang sedang direncanakan dan dijalankan.</p></div>
+        <div class="panel agent-status"><div><span class="status-pulse"></span><b>Agent siap menerima tugas</b><small>Model akan bekerja melalui backend saat API sudah diatur.</small></div><span class="tag">READY</span></div>
+        <div class="section-line"><span>ALUR KERJA AGENT</span></div>
+        <div class="steps">
+          <div class="step"><span>01</span><div><b>Memahami perintah</b><small>Mengurai tujuan dan konteks</small></div><i>●</i></div>
+          <div class="step"><span>02</span><div><b>Merencanakan</b><small>Menyusun langkah yang diperlukan</small></div><i>●</i></div>
+          <div class="step"><span>03</span><div><b>Menggunakan tools</b><small>Menjalankan tools yang diizinkan</small></div><i>●</i></div>
+          <div class="step"><span>04</span><div><b>Mengevaluasi hasil</b><small>Memeriksa hasil dan memberi ringkasan</small></div><i>●</i></div>
+        </div>
+        <div class="panel"><b>Catatan keamanan</b><p>Agent hanya dapat menjalankan tools yang tersedia di aplikasi. Tindakan eksternal seperti mengirim pesan, menghapus data, atau membeli sesuatu perlu integrasi dan persetujuan terpisah.</p></div>
+        <div class="page-heading selfdev-heading"><div class="eyebrow">SELF DEVELOPMENT MODE</div><h1>Pengembangan <em>Diri</em></h1><p>SENDIKO membantu memeriksa sistem, menyusun peningkatan, dan menyiapkan perubahan untuk persetujuan pemilik.</p></div>
+        <div class="panel selfdev-panel">
+          <div class="selfdev-top"><div><b>Self Development Agent</b><small>Evaluasi kemampuan dan rencana pengembangan</small></div><span class="tag">TERKONTROL</span></div>
+          <button id="runSelfCheck" class="primary-btn">Jalankan evaluasi sistem</button>
+          <div id="selfCheckResult" class="selfdev-result" aria-live="polite"><p>Belum ada evaluasi. Tekan tombol untuk melihat status kemampuan dan prioritas pengembangan.</p></div>
+          <label class="approval-row"><input id="approveChanges" type="checkbox"> Saya menyetujui SENDIKO menyiapkan usulan perubahan untuk saya tinjau.</label>
+          <button id="makeDevPlan" class="secondary-btn">Buat rencana pengembangan</button>
+          <p class="security-note">Mode aman: SENDIKO tidak boleh mengubah kode produksi, menghapus data, memasang layanan, atau mengeluarkan biaya tanpa persetujuan eksplisit. Evaluasi ini memeriksa kemampuan yang tercatat di aplikasi, bukan audit server langsung.</p>
+        </div>
+      </section>
+
+      <section class="view" id="view-skills">
+        <div class="page-heading"><div class="eyebrow">CAPABILITY LIBRARY</div><h1>Agent <em>Skills</em></h1><p>Kumpulan kemampuan dan instruksi khusus agent.</p></div>
+        <div class="panel skill-card"><div class="skill-icon">✦</div><div><b>Perencana Proyek</b><small>Membagi tujuan menjadi langkah kerja.</small></div><span class="tag">AKTIF</span></div>
+        <div class="panel skill-card"><div class="skill-icon">✎</div><div><b>Penulis Konten</b><small>Membuat naskah, caption, dan ide promosi.</small></div><span class="tag">AKTIF</span></div>
+        <div class="panel skill-card"><div class="skill-icon">▤</div><div><b>Analisis & Riset</b><small>Menyusun analisis berdasarkan informasi yang diberikan.</small><span class="soon">WEB SEARCH: BELUM TERHUBUNG</span></div><span class="tag muted">BASIC</span></div>
+        <div class="panel add-skill"><b>Tambah skill pribadi</b><input id="skillName" placeholder="Nama skill"><textarea id="skillInstruction" rows="3" placeholder="Instruksi kemampuan ini..."></textarea><button id="addSkill" class="primary-btn">Simpan skill</button></div>
+        <div id="customSkills"></div>
+      </section>
+
+      <section class="view" id="view-memory">
+        <div class="page-heading"><div class="eyebrow">LONG-TERM CONTEXT</div><h1>Agent <em>Memory</em></h1><p>Sinkronkan catatan lintas perangkat dengan Supabase Cloud. Memory lokal tetap tersedia.</p></div>
+        <div class="panel cloud-memory-panel">
+          <b>Cloud Memory</b><p>Masuk menggunakan akun Supabase Anda untuk menyimpan memory di cloud. Perlu konfigurasi Supabase sekali saja.</p>
+          <label>SUPABASE PROJECT URL</label><input id="supabaseUrl" placeholder="https://xxxx.supabase.co" inputmode="url">
+          <label>SUPABASE ANON / PUBLISHABLE KEY</label><input id="supabaseKey" placeholder="sb_publishable_… atau anon key" autocomplete="off">
+          <label>EMAIL</label><input id="cloudEmail" type="email" placeholder="Email akun cloud">
+          <label>PASSWORD</label><input id="cloudPassword" type="password" placeholder="Password akun cloud">
+          <div class="cloud-actions"><button id="cloudSignup" class="secondary-btn">Daftar akun</button><button id="cloudLogin" class="primary-btn">Masuk / Sinkronkan</button><button id="cloudLogout" class="text-button">Keluar</button></div>
+          <div id="cloudStatus" class="inline-status">Cloud belum dikonfigurasi.</div>
+          <button id="cloudSync" class="secondary-btn">Sinkronkan memory sekarang</button>
+          <details><summary>Petunjuk setup cloud</summary><p>Di Supabase buat project, aktifkan Email Auth, lalu buat tabel memories dengan kolom id (uuid, default gen_random_uuid()), user_id (uuid), note (text), created_at (timestamptz, default now()). Aktifkan RLS dan policy SELECT/INSERT/UPDATE/DELETE agar user_id = auth.uid(). Gunakan URL dan anon/publishable key saja; jangan masukkan service_role key.</p><button id="copySql" class="text-button">Salin SQL setup</button></details>
+        </div>
+        <div class="panel memory-add"><input id="memoryInput" placeholder="Tulis hal penting untuk diingat..."><button id="addMemory" class="primary-btn">Simpan</button></div>
+        <div class="section-line"><span>CATATAN TERSIMPAN</span><button id="clearMemory" class="text-button">Hapus semua</button></div>
+        <div id="memoryList" class="memory-list"></div>
+        <p class="note">Memory lokal tetap tersimpan di perangkat. Cloud Memory aktif hanya setelah konfigurasi, login, dan sinkronisasi berhasil. Jangan simpan data rahasia atau sensitif.</p>
+      </section>
+
+      <section class="view" id="view-settings">
+        <div class="page-heading"><div class="eyebrow">CONFIGURATION</div><h1>Agent <em>Settings</em></h1><p>Hubungkan model AI agar agent dapat merespons.</p></div>
+        <div class="panel settings-panel">
+          <label>MODE ROUTING</label>
+          <select id="routeMode">
+            <option value="economy">Hemat - model ekonomis</option>
+            <option value="balanced">Seimbang - default</option>
+            <option value="power">Pintar - model lebih kuat</option>
+            <option value="custom">Kustom - pilih provider dan model</option>
+          </select>
+          <label>PROVIDER AI</label>
+          <select id="provider">
+            <option value="openai">OpenAI</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="groq">Groq</option>
+            <option value="gemini">Google Gemini (OpenAI-compatible)</option>
+            <option value="custom">Endpoint OpenAI-compatible sendiri</option>
+          </select>
+          <label>MODEL</label><input id="modelName" value="gpt-4o-mini" placeholder="Nama model dari provider">
+          <label>BASE URL (UNTUK PROVIDER CUSTOM)</label><input id="apiBase" value="https://api.openai.com/v1" placeholder="https://alamat-provider/v1">
+          <div class="api-note">API key tidak pernah disimpan di browser. Pasang key provider di Netlify Environment variables: <code>OPENAI_API_KEY</code>, <code>OPENROUTER_API_KEY</code>, <code>GROQ_API_KEY</code>, atau <code>GEMINI_API_KEY</code>. Isi hanya key provider yang dipakai. Model gratis bergantung pada kuota dan ketersediaan provider.</div>
+          <button id="saveSettings" class="primary-btn">Simpan pengaturan model</button>
+          <div id="settingsStatus" class="inline-status"></div>
+        </div>
+        <div class="panel">
+          <b>Status koneksi</b>
+          <div class="connection-row"><span>Backend Agent</span><span id="backendStatus" class="tag muted">BELUM DICEK</span></div>
+          <button id="checkBackend" class="secondary-btn">Periksa backend</button>
+        </div>
+        <div class="panel"><b>Petunjuk deploy Netlify</b><p>Unggah ZIP proyek ini ke Netlify. Buka Site configuration → Environment variables, tambahkan API key provider yang dipilih, lalu deploy ulang. Jangan pernah menaruh API key di file website.</p></div><div class="panel"><b>Catatan model lokal</b><p>Ollama atau model lokal berjalan di komputer milik pengguna. Website yang di-host di Netlify tidak dapat mengakses localhost milik HP secara langsung. Untuk menghubungkannya perlu tunnel aman atau backend yang berjalan di jaringan yang sama.</p></div>
+        <div class="footer-version">AGENT SENDIKO · WEB BUILD 1.4</div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-view="chat"><span>◉</span><small>Chat</small></button>
+      <button class="nav-item" data-view="agent"><span>⌘</span><small>Agent</small></button>
+      <button class="nav-item" data-view="skills"><span>✧</span><small>Skills</small></button>
+      <button class="nav-item" data-view="memory"><span>▣</span><small>Memory</small></button>
+      <button class="nav-item" data-view="settings"><span>⚙</span><small>Settings</small></button>
+    </nav>
+  </div>
+  <div id="toast" class="toast"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

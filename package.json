@@ -1,0 +1,12 @@
+{
+  "name": "sendiko-ai-agent",
+  "version": "1.4.0",
+  "private": true,
+  "description": "SENDIKO AI AGENT - mobile-first autonomous AI workspace",
+  "scripts": {
+    "dev": "netlify dev"
+  },
+  "devDependencies": {
+    "netlify-cli": "^23.0.0"
+  }
+}
